@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js"></script>
+    <script src="js/stream.js"></script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO"
+        crossorigin="anonymous">
+    <link rel="stylesheet" href="style.css">
+    <title>Chat</title>
+</head>
+
+<body>
+    <canvas id="preview" style="display:none;"></canvas>
+    <div class="nickname_container" id="nick">
+        <span class="alert"></span>
+        <form id="submit">
+            <form>
+                <input type="text" name="username" id="nickname" placeholder="Nome" />
+            </form>
+        </form>
+    </div>
+    <div class="chatbox">
+        <div class="dados">
+            <div class="name" id="name"></div>
+            <div class="last" id="time"></div>
+        </div>
+        <div class="chatlogs" id="chatlogs">
+            
+        </div>
+        <div class="form">
+                <input class="textarea" type="text" placeholder="Escreva aqui!" id="textarea" />
+                <img src="img/sharp_videocam_black_36dp.png" width="50px" class="video" height="50px">
+        </div>
+    </div>
+
+        <script type="text/javascript">
+            $(document).ready(function () {
+                var socket = io.connect("http://localhost:3000");
+                var ready = false;
+                $('input[name=username]').keyup(function (e) {
+
+                    e.preventDefault();
+                    // console.log($("#nickname").val())
+                    if($("#nickname").val() != ""){
+                        if (e.keyCode == 9 || e.keyCode == 13) {
+                            $("#nick").fadeOut();
+                            $(".chatbox").css("diplay","block").fadeIn();
+                            var name = $("#nickname").val();
+                            var time = new Date();
+                            $("#name").html(name);
+                            $("#time").html('Entrou às: ' + time.getHours() + ':' + time.getMinutes());
+                            ready = true;
+                            socket.emit("join", name);
+                        }
+
+                    }else{
+                        $('.alert').html("O nome não pode ficar em branco.").fadeIn();
+                        setInterval(() => {
+                            $('.alert').html("").fadeOut();                        
+                        }, 1000);
+                    }
+                });
+
+                $("#textarea").keypress(function (e) {
+                    if (e.which == 13) {
+                        var text = $("#textarea").val();
+                        $("#textarea").val('');
+                        var time = new Date();
+                        
+                        $("#chatlogs").append('<div class="chat self"><div class="avatar"></div><p class="message">'+text+'<span class="horaMsg">enviado às:'+time.getHours()+':'+time.getMinutes()+'</span></p></div>');
+                      
+                        socket.emit("send", text);
+
+                        $("#chatlogs").animate({scrollTop: $("#chatlogs").height()*$(".chat").height()}, 3000);
+                    }
+                });
+
+                /*Aqui fica a parte de streaming de video*/
+                let gravando = 0;
+                $(".video").on("click",()=>{
+                    gravando++;
+ 
+                    $("#chatlogs").append('<div class="chat friend"><div class="avatar"></div><p class="message"><video src="" width="380" height="300"><span class="horaMsg"></span></p></div>');
+                        gravar();
+                        socket.emit("gravando",socket.id, gravando,img);
+                });
+
+                socket.on("update", function (msg) {
+                    if (ready) {
+                        $('.chatlogs').append('<li class="info">' + msg+ '</li>')
+                    }
+                });
+
+                socket.on("chat", function (client, msg) {
+                    if (ready) {
+                        var time = new Date();
+                        $("#chatlogs").append('<div class="chat friend"><div class="avatar"></div><p class="message">'+msg+'<span class="horaMsg">'+client+' às:'+time.getHours()+':'+time.getMinutes()+'</span></p></div>');
+                        $("#chatlogs").animate({scrollTop: $("#chatlogs").height()*1000000}, 500);
+                    }
+                });
+            });
+        </script>
+</body>
+
+</html>
